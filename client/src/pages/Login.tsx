@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth } from '@/lib/api';
 import { User } from '@/types';
 
-export default function Login({ setUser }: { setUser: (user: User) => void }) {
+export default function Login({ setUser }: { setUser: (user: User | null) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -34,8 +34,19 @@ export default function Login({ setUser }: { setUser: (user: User) => void }) {
       employee: { email: 'alice@company.com', password: 'employee123' },
     };
     const cred = credentials[role as keyof typeof credentials];
-    setEmail(cred.email);
-    setPassword(cred.password);
+    setError('');
+    setLoading(true);
+    try {
+      const { data } = await auth.login(cred);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+      navigate(`/${data.user.role === 'employee' ? 'employee' : data.user.role === 'manager' ? 'manager' : 'admin'}`);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

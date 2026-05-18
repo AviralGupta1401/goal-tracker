@@ -1,11 +1,13 @@
 import { User } from '@/types';
+import { useNavigate } from 'react-router-dom';
 
 export function LogoutButton({ setUser }: { setUser: (u: User | null) => void }) {
+  const navigate = useNavigate();
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    window.location.href = '/login';
+    navigate('/login', { replace: true });
   };
 
   return (

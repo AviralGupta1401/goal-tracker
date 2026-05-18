@@ -134,22 +134,15 @@ router.get('/my', authMiddleware, async (req: AuthRequest, res) => {
 router.get('/team', authMiddleware, requireRole('manager', 'admin'), async (req: AuthRequest, res) => {
   try {
     const cycleYear = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
-    let employeeId = req.query.employeeId as string;
+    const employeeId = req.query.employeeId as string;
 
     let query: any = { cycleYear };
-    if (req.user!.role === 'manager') {
-      if (employeeId) {
-        query.employeeId = employeeId;
-      } else {
-        query.employeeId = req.user!.id;
-      }
-    }
-
     if (employeeId) {
       query.employeeId = employeeId;
     } else if (req.user!.role === 'manager') {
       const employees = await User.find({ managerId: req.user!.id });
-      query.employeeId = { $in: [req.user!.id, ...employees.map(e => e._id)] };
+      const employeeIds = employees.map(e => e._id);
+      query.employeeId = { $in: [req.user!.id, ...employeeIds] };
     }
 
     const goals = await Goal.find(query).populate('employeeId', 'name email department').sort({ createdAt: 1 });
@@ -165,7 +158,7 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res) => {
     if (!goal) return res.status(404).json({ error: 'Goal not found' });
 
     const isOwner = goal.employeeId.toString() === req.user!.id;
-    const isManager = goal.employeeId.toString() === req.user!.managerId || req.user!.role === 'manager';
+    const isManager = req.user!.role === 'manager' && (goal as any).employeeId?.managerId?.toString() === req.user!.id;
     const isAdmin = req.user!.role === 'admin';
 
     if (goal.status === 'locked' && !isAdmin) {

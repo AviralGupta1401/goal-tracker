@@ -70,7 +70,7 @@ function AdminOverview() {
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
-                data={data.goalsByStatus}
+                data={data.goalsByStatus.length > 0 ? data.goalsByStatus : [{ _id: 'No Data', count: 1 }]}
                 cx="50%"
                 cy="50%"
                 outerRadius={80}
@@ -78,7 +78,7 @@ function AdminOverview() {
                 nameKey="_id"
                 label={({ _id, count }) => `${_id}: ${count}`}
               >
-                {data.goalsByStatus.map((_: any, i: number) => (
+                {(data.goalsByStatus.length > 0 ? data.goalsByStatus : [{ _id: 'No Data', count: 1 }]).map((_: any, i: number) => (
                   <Cell key={i} fill={statusColors[i % statusColors.length]} />
                 ))}
               </Pie>
@@ -90,7 +90,7 @@ function AdminOverview() {
         <div className="card">
           <h3 className="font-semibold mb-4">Goals by Thrust Area</h3>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={data.goalsByThrustArea}>
+            <BarChart data={data.goalsByThrustArea.length > 0 ? data.goalsByThrustArea : [{ _id: 'None', count: 0 }]}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="_id" tick={{ fontSize: 10 }} />
               <YAxis />

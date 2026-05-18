@@ -3,7 +3,6 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { goals, checkIns } from '@/lib/api';
 import { User, Goal, CheckIn } from '@/types';
 import { Layout } from '@/components/Layout';
-import { GoalCard } from '@/components/GoalCard';
 
 export default function ManagerDashboard({ user, setUser }: { user: User; setUser: (u: User | null) => void }) {
   return (
@@ -62,7 +61,9 @@ function ManagerOverview({ user }: { user: User }) {
           <h2 className="font-semibold mb-4 text-yellow-700">Goals Awaiting Your Approval</h2>
           <div className="space-y-3">
             {pendingApproval.map(goal => (
-              <GoalCard key={goal._id} goal={goal} showActions showManagerActions />
+              <GoalCardInline key={goal._id} goal={goal} onDone={() => {
+                goals.getTeam().then(({ data }) => setTeamGoals(data.goals));
+              }} />
             ))}
           </div>
         </div>
@@ -140,7 +141,11 @@ function TeamGoals({ user }: { user: User }) {
                   </td>
                   <td className="table-cell">
                     {goal.status === 'submitted' && (
-                      <GoalCard goal={goal} showActions showManagerActions />
+                      <div className="flex gap-2">
+                        <ApproveButton goal={goal} onDone={() => {
+                          goals.getTeam().then(({ data }) => setTeamGoals(data.goals));
+                        }} />
+                      </div>
                     )}
                     {goal.status !== 'submitted' && <span className="text-xs text-slate-400">-</span>}
                   </td>
@@ -264,5 +269,114 @@ function ManagerCheckIns({ user }: { user: User }) {
         </div>
       )}
     </div>
+  );
+}
+
+function GoalCardInline({ goal, onDone }: { goal: Goal; onDone: () => void }) {
+  const [editMode, setEditMode] = useState(false);
+  const [editData, setEditData] = useState({ targetValue: String(goal.targetValue), weightage: goal.weightage, managerComment: goal.managerComment || '' });
+  const [loading, setLoading] = useState(false);
+
+  const handleApprove = async () => {
+    setLoading(true);
+    try {
+      await goals.approve(goal._id, editData);
+      onDone();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to approve');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    const comment = prompt('Reason for rejection:');
+    if (!comment) return;
+    setLoading(true);
+    try {
+      await goals.reject(goal._id, { managerComment: comment });
+      onDone();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to reject');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="border border-slate-200 rounded-lg p-4">
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <h3 className="font-semibold">{goal.title}</h3>
+          <p className="text-sm text-slate-600">{goal.description}</p>
+          <div className="text-xs text-slate-500 mt-1">
+            {(goal.employeeId as any)?.name || 'Unknown'} • {(goal.employeeId as any)?.department || ''}
+          </div>
+          {goal.managerComment && (
+            <div className="text-xs text-slate-600 mt-2 bg-slate-50 p-2 rounded">
+              <strong>Manager:</strong> {goal.managerComment}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2 ml-4">
+          <button onClick={() => setEditMode(!editMode)} className="btn-secondary text-xs">Edit</button>
+          <button onClick={handleApprove} className="btn-success text-xs" disabled={loading}>Approve</button>
+          <button onClick={handleReject} className="btn-danger text-xs" disabled={loading}>Reject</button>
+        </div>
+      </div>
+      {editMode && (
+        <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Target</label>
+            <input value={editData.targetValue} onChange={e => setEditData({ ...editData, targetValue: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Weightage (%)</label>
+            <input type="number" value={editData.weightage} onChange={e => setEditData({ ...editData, weightage: parseInt(e.target.value) })} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Comment</label>
+            <input value={editData.managerComment} onChange={e => setEditData({ ...editData, managerComment: e.target.value })} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ApproveButton({ goal, onDone }: { goal: Goal; onDone: () => void }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleApprove = async () => {
+    setLoading(true);
+    try {
+      await goals.approve(goal._id, {});
+      onDone();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to approve');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    const comment = prompt('Reason for rejection:');
+    if (!comment) return;
+    setLoading(true);
+    try {
+      await goals.reject(goal._id, { managerComment: comment });
+      onDone();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to reject');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <button onClick={handleApprove} className="btn-success text-xs" disabled={loading}>Approve</button>
+      <button onClick={handleReject} className="btn-danger text-xs" disabled={loading}>Reject</button>
+    </>
   );
 }

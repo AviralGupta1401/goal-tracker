@@ -90,17 +90,12 @@ router.get('/team', authMiddleware, requireRole('manager', 'admin'), async (req:
 
     let query: any = { year };
     if (req.user!.role === 'manager') {
-      const employees = await Goal.distinct('employeeId', { employeeId: req.user!.managerId || req.user!.id });
-      const directReports = await Goal.distinct('employeeId', { employeeId: req.user!.id });
+      const reports = await User.find({ managerId: req.user!.id });
+      const reportIds = reports.map(r => r._id);
       
       if (employeeId) {
         query.employeeId = employeeId;
       } else {
-        const teamMembers = await Goal.distinct('employeeId', { 
-          $or: [{ employeeId: req.user!.id }] 
-        });
-        const reports = await User.find({ managerId: req.user!.id });
-        const reportIds = reports.map(r => r._id);
         query.employeeId = { $in: [req.user!.id, ...reportIds] };
       }
     } else if (employeeId) {

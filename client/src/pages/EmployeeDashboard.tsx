@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { goals, checkIns } from '@/lib/api';
 import { User, Goal, CheckIn, THRUST_AREAS, UOM_OPTIONS, QUARTERS } from '@/types';
 import { Layout } from '@/components/Layout';
@@ -178,7 +178,96 @@ function CreateGoals({ user }: { user: User }) {
 
 function EditGoal({ user }: { user: User }) {
   const navigate = useNavigate();
-  return <div><button onClick={() => navigate('/employee')} className="btn-secondary mb-4">Back</button>Editing...</div>;
+  const [goal, setGoal] = useState<Goal | null>(null);
+  const [formData, setFormData] = useState({ title: '', description: '', thrustArea: '', uom: 'numeric', uomDirection: 'min', targetValue: '', weightage: 10 });
+
+  useEffect(() => {
+    const id = window.location.pathname.split('/').pop();
+    goals.getMy().then(({ data }) => {
+      const g = data.goals.find((g: Goal) => g._id === id);
+      if (g) {
+        setGoal(g);
+        setFormData({
+          title: g.title,
+          description: g.description,
+          thrustArea: g.thrustArea,
+          uom: g.uom,
+          uomDirection: g.uomDirection || 'min',
+          targetValue: String(g.targetValue),
+          weightage: g.weightage,
+        });
+      }
+    });
+  }, []);
+
+  const handleSave = async () => {
+    if (!goal) return;
+    try {
+      await goals.update(goal._id, { ...formData, targetValue: formData.uom === 'zero' ? 0 : formData.targetValue });
+      navigate('/employee');
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to save');
+    }
+  };
+
+  if (!goal) return <div className="card">Loading...</div>;
+
+  return (
+    <div>
+      <button onClick={() => navigate('/employee')} className="btn-secondary mb-4">Back</button>
+      <div className="card max-w-2xl">
+        <h2 className="text-xl font-bold mb-4">Edit Goal</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+            <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+            <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={3} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Thrust Area</label>
+            <select value={formData.thrustArea} onChange={e => setFormData({ ...formData, thrustArea: e.target.value })}>
+              {THRUST_AREAS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">UoM</label>
+              <select value={formData.uom} onChange={e => setFormData({ ...formData, uom: e.target.value })}>
+                <option value="numeric">Numeric</option>
+                <option value="percentage">Percentage</option>
+                <option value="timeline">Timeline</option>
+                <option value="zero">Zero-based</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Direction</label>
+              <select value={formData.uomDirection} onChange={e => setFormData({ ...formData, uomDirection: e.target.value })}>
+                <option value="min">Higher is Better</option>
+                <option value="max">Lower is Better</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Target Value</label>
+              <input value={formData.targetValue} onChange={e => setFormData({ ...formData, targetValue: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Weightage (%)</label>
+              <input type="number" value={formData.weightage} onChange={e => setFormData({ ...formData, weightage: parseInt(e.target.value) || 0 })} />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={handleSave} className="btn-primary">Save Changes</button>
+            <button onClick={() => navigate('/employee')} className="btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function EmployeeCheckIns({ user }: { user: User }) {
@@ -196,10 +285,10 @@ function EmployeeCheckIns({ user }: { user: User }) {
     try {
       const [goalsRes, checkInsRes] = await Promise.all([
         goals.getMy(),
-        checkIns.getTeam({ quarter: selectedQuarter, year: new Date().getFullYear() }),
+        checkIns.getMy(new Date().getFullYear()),
       ]);
       setGoalsList(goalsRes.data.goals.filter((g: Goal) => g.status === 'approved'));
-      setCheckInsList(checkInsRes.data.checkIns);
+      setCheckInsList(checkInsRes.data.checkIns.filter((ci: CheckIn) => ci.quarter === selectedQuarter));
     } catch (err) {
       console.error(err);
     } finally {
