@@ -43,7 +43,9 @@ export default function Login({ setUser }: { setUser: (user: User | null) => voi
       setUser(data.user);
       navigate(`/${data.user.role === 'employee' ? 'employee' : data.user.role === 'manager' ? 'manager' : 'admin'}`);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      const msg = err.response?.data?.error || err.message || 'Login failed';
+      setError(msg + ' — Check that VITE_API_URL is set in Vercel');
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
@@ -58,11 +60,15 @@ export default function Login({ setUser }: { setUser: (user: User | null) => voi
             <p className="text-slate-600 mt-2">In-House Goal Setting & Tracking Portal</p>
           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-              {error}
-            </div>
-          )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          {error}
+        </div>
+      )}
+
+      <div className="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-lg mb-4 text-xs">
+        Backend: {import.meta.env.VITE_API_URL || 'http://localhost:3001'}
+      </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
