@@ -5,7 +5,8 @@
 ---
 
 ## 1. Working Link (Live Demo)
-[https://goal-tracker-948lf7jh0-2k23csaiml2310616-8786s-projects.vercel.app](https://goal-tracker-948lf7jh0-2k23csaiml2310616-8786s-projects.vercel.app)
+Frontend: https://goal-tracker-weld.vercel.app  
+Backend: https://goal-tracker-u47t.onrender.com  
 
 **Demo Credentials**:
 | Role | Email | Password |
